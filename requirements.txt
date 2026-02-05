@@ -1,6 +1,7 @@
 streamlit
-pyttsx3
 gTTS
 
-pydub
+
+
+
 

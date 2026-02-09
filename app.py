@@ -1,43 +1,9 @@
-# app.py
-# Free Text-to-Voice Generator with Password, Languages, Genders & UI
+# app_web.py
+# Free Text-to-Voice Generator for Streamlit Cloud (gTTS) with Donations and Character Count
 
 import streamlit as st
 from gtts import gTTS
 import tempfile
-
-# -----------------------------
-# PASSWORD PROTECTION
-# Must be at the very top!
-# -----------------------------
-def check_password():
-    """Returns True if user entered correct password."""
-    if "password_correct" not in st.session_state:
-        st.session_state.password_correct = False
-
-    if st.session_state.password_correct:
-        return True
-
-    def password_entered():
-        if st.session_state["password"] == st.secrets["APP_PASSWORD"]:
-            st.session_state.password_correct = True
-            del st.session_state["password"]
-        else:
-            st.session_state.password_correct = False
-
-    st.text_input(
-        "🔒 Enter password to access this app",
-        type="password",
-        on_change=password_entered,
-        key="password",
-    )
-
-    if "password_correct" in st.session_state and not st.session_state.password_correct:
-        st.error("❌ Incorrect password")
-
-    return False
-
-if not check_password():
-    st.stop()
 
 # -----------------------------
 # HELPER FUNCTION
@@ -60,17 +26,14 @@ st.set_page_config(
 
 st.title("🎙️ Free Text-to-Voice Generator")
 st.write("CPU-friendly • Works Online • No API Key Needed")
+st.markdown("---")
 
 # Sidebar for settings
 with st.sidebar:
     st.header("Settings ⚙️")
     language = st.selectbox(
         "Select Language 🌐",
-        options=["English", "Spanish", "German", "French"]
-    )
-    gender = st.radio(
-        "Select Voice Gender 🗣️",
-        options=["Male", "Female"]
+        options=["English", "Spanish", "German", "Italian", "French"]
     )
     speed = st.select_slider(
         "Voice Speed 🐢/⚡",
@@ -83,6 +46,7 @@ lang_map = {
     "English": "en",
     "Spanish": "es",
     "German": "de",
+    "Italian": "it",
     "French": "fr"
 }
 
@@ -90,24 +54,27 @@ lang_map = {
 speed_map = {
     "Slow": True,
     "Normal": False,
-    "Fast": False
+    "Fast": False  # gTTS does not support fast, so normal is used
 }
-
-# Adjust slow flag based on language and gender
-def get_slow_flag(language_choice, gender_choice, speed_choice):
-    if language_choice == "English":
-        return True if gender_choice == "Female" else speed_map[speed_choice]
-    else:
-        return speed_map[speed_choice]  # other languages: default voice
 
 # -----------------------------
 # Text Input
 # -----------------------------
 text_input = st.text_area(
-    "Enter your text (up to 1000+ words):",
+    "Enter your text (up to 5000 characters):",
     height=220,
     placeholder="Paste your script here..."
 )
+
+# -----------------------------
+# Character / Word Count
+# -----------------------------
+num_chars = len(text_input)
+num_words = len(text_input.split())
+st.markdown(f"📝 Characters: {num_chars} | Words: {num_words}")
+
+if num_chars > 5000:
+    st.warning("⚠️ Text is very long! For best results, keep under 5000 characters (~800 words).")
 
 # -----------------------------
 # Generate Audio
@@ -120,13 +87,15 @@ with col1:
 if generate_btn:
     if not text_input.strip():
         st.error("❌ Please enter some text.")
+    elif num_chars > 5000:
+        st.error("❌ Text exceeds the recommended 5000 characters. Please shorten it.")
     else:
         try:
             with st.spinner("Generating voice... Please wait ⏳"):
                 audio_path = generate_tts(
                     text=text_input,
                     lang=lang_map[language],
-                    slow=get_slow_flag(language, gender, speed)
+                    slow=speed_map[speed]
                 )
 
             st.success("✅ Voice generated successfully!")
@@ -147,3 +116,25 @@ if generate_btn:
 
         except Exception as e:
             st.error(f"❌ Error: {e}")
+
+st.markdown("---")
+
+# -----------------------------
+# Donation Section
+# -----------------------------
+st.subheader("💖 Support this project")
+st.markdown(
+    """
+If you enjoy using this app and want to support me, you can donate via **Ko-fi** or **PayPal**.  
+Your support helps me keep improving the app and adding more languages and features!
+
+<div style="display:flex; gap:10px;">
+<a href="https://ko-fi.com/sp_solutions" target="_blank">
+    <button style="padding:10px 20px; font-size:16px;">Donate via Ko-fi</button>
+</a>
+<a href="https://www.paypal.com/donate/?hosted_button_id=QYF89E88GFAYN" target="_blank">
+    <button style="padding:10px 20px; font-size:16px;">Donate via PayPal</button>
+</a>
+</div>
+""", unsafe_allow_html=True
+)
